@@ -55,7 +55,7 @@ class Server(object):
                 self.handle_client_commands(conn, request, con)
 
         except ConnectionError or OSError:
-            print(f"client connection error: {conn.getpeername()}")
+            print(f"client {conn.getpeername()} has exited.")
             conn.close()
             self.amount_clients -= 1
 
