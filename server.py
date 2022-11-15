@@ -4,6 +4,7 @@ import sqlite3 as sql
 import threading
 import json
 from library_protocol import client_commands, server_commands
+import time
 
 # data bases
 wait_login = {}  # {client_socket: client_address, code, username}  # code and username are when the client succeeded
@@ -30,9 +31,11 @@ class Server(object):
                     print("Waiting for a new client...")
                 client_socket, client_address = server_socket.accept()  # blocks the running of the file
                 self.amount_clients += 1
-                print(f"A new client has connected! {client_address}\n--------------------------------\nAmount: "
-                      f"{self.amount_clients}\n--------------------------------\n")
                 wait_login[client_socket] = client_address
+                print(f"A new client has connected! {client_address}\n--------------------------------\nAmount: "
+                      f"{self.amount_clients}\n--------------------------------\n"
+                      f"Waiting for login: {wait_login.values()}\n"
+                      f"Already logged in: {login_dict.values()}\n--------------------------------\n")
                 self.handle_client(client_socket)
         except socket.error as e:
             print(e)
@@ -55,22 +58,37 @@ class Server(object):
                 self.handle_client_commands(conn, request, con)
 
         except ConnectionError or OSError:
+            if conn in wait_login.keys():
+                del wait_login[conn]
+            else:
+                del login_dict[conn]
             print(f"client {conn.getpeername()} has exited.")
             conn.close()
-            self.amount_clients -= 1
 
         finally:
             if con:
                 con.close()
-                print(f"DB Connection has closed with [Client] {conn}")
+                print(f"DB Connection has closed with that Client\n--------------------------")
+            self.amount_clients -= 1
 
     def handle_client_commands(self, conn, request, con):
         cmd, msg = library_protocol.disassemble_message(request)
-        to_send = ""
+        to_send, msg_to_send = "", ""
         if cmd == client_commands["login_cmd"]:
-            to_send = server_commands["login_ok_cmd"] if self.check_login(conn, msg, con) \
+            to_send, msg_to_send = self.check_login(conn, msg, con)
+            to_send = server_commands["login_ok_cmd"] if to_send \
                 else server_commands["login_failed_cmd"]
-        to_send = library_protocol.build_message(to_send)
+        elif cmd == client_commands["sign_up_cmd"]:
+            to_send, msg_to_send = self.register_check(msg, con)
+        elif cmd == client_commands["logout_cmd"]:
+            try:
+                wait_login[conn] = login_dict[conn][0]  # only the peer name
+                del login_dict[conn]
+                print("Logout from the account succeeded.\n--------------------------")
+                return
+            except KeyError:  # if the player is between the main server to the games rooms server
+                return
+        to_send = library_protocol.build_message(to_send, msg_to_send)
         print(f"[Server] -> [{conn.getpeername()}] {to_send}")
         conn.sendall(to_send.encode())
 
@@ -83,17 +101,40 @@ class Server(object):
         username_input, password_input = msg.split("#", 1)
         if (not library_protocol.check_username_validation(username_input)) or password_input == "" or\
                 password_input is None:
-            return False
+            return False, ""
+        if username_input in map(lambda client: client[-1], login_dict.values()):
+            return False, "the account is already logged in"  # username is already logged in
         cur = con.cursor()
         cur.execute("SELECT * FROM Users WHERE Username = ? and Password = ?", (username_input, password_input))
         x = cur.fetchall()
         if x:
-            login_dict[conn] = wait_login[conn]
+            login_dict[conn] = wait_login[conn], username_input
             del wait_login[conn]
             cur.close()
-            return True
+            return True, ""
         cur.close()
-        return False
+        return False, ""
+
+    def register_check(self, msg, con):
+        username, password, confirm_password = msg.split("#")
+        if len(password) < 4 or len(confirm_password) < 4:
+            return server_commands["sign_up_failed_cmd"], "The password is too short."
+        elif password != confirm_password:
+            return server_commands["sign_up_failed_cmd"], "The passwords does not match each other"
+        if not library_protocol.check_username_validation(username):
+            return server_commands["sign_up_failed_cmd"], "The username should be in letters a-z, A-Z, 0-9 include."
+        cur = con.cursor()
+        cur.execute("SELECT Username FROM Users WHERE Username = ?",
+                    (username,))  # the comma is for making the parameter a tuple and not char
+        if cur.fetchall():
+            cur.close()
+            return server_commands["sign_up_failed_cmd"], "The username is already taken."
+        cur.execute(
+            "INSERT INTO Users (Username, Password, wins, played_games) values (?, ?, ?, ?)",
+            (username, password, 0, 0))
+        con.commit()
+        cur.close()
+        return server_commands["sign_up_ok_cmd"], "registering has succeeded"
 
 
 if __name__ == "__main__":

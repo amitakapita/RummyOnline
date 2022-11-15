@@ -5,6 +5,7 @@ import threading
 import tkinter as tk
 import traceback
 from library_protocol import client_commands, server_commands
+import time
 
 
 class Client(object):
@@ -21,9 +22,10 @@ class Client(object):
 
         self.lbl_welcome = tk.Label(self.root, text="Welcome to RummyOnline", font="Arial 17", bg="#2596be")
         self.enter_name = tk.Label(self.root, text="Please enter your Username:", font="Arial 14", bg="#2596be")
-        self.entry_username = tk.Entry(self.root, font="Arial 13", bg="DeepSkyBlue2")
+        self.entry_username = tk.Entry(self.root, font="Arial 13", bg="DeepSkyBlue2", disabledbackground="DeepSkyBlue3")
         self.enter_password = tk.Label(self.root, text="Please enter your Password:", font="Arial 14", bg="#2596be")
-        self.entry_password = tk.Entry(self.root, font="Arial 13", bg="DeepSkyBlue2", show="*")
+        self.entry_password = tk.Entry(self.root, font="Arial 13", bg="DeepSkyBlue2", show="*"
+                                       , disabledbackground="DeepSkyBlue3")
         self.login_btn = tk.Button(self.root, text="login", relief="solid", activebackground="DeepSkyBlue3",
                                    bg="DeepSkyBlue2", font="Arial 14")
         self.lbl1_message = tk.Label(self.root, bg="#2596be", font="Arial 14")
@@ -48,6 +50,13 @@ class Client(object):
         self.confirm_password_input_enter = tk.Entry(self.root, font="Arial 13", show="*", bg="DeepSkyBlue2")
         self.lbl2_message = tk.Label(self.root, bg="#2596be")
         self.back_btn = tk.Button(self.root, text="Back", relief="solid", font="Arial 15", background="#c76969")
+
+        # main lobby
+        self.lbl_welcome_main_lobby = tk.Label(self.root, bg="#2596be", font="Arial 16")
+        self.profile_btn = tk.Button(self.root, text="View my profile", relief="solid", activebackground="DeepSkyBlue3"
+                                     , bg="DeepSkyBlue2", font="Arial 15")
+        self.game_rooms_lobby_btn = tk.Button(self.root, text="Game rooms lobby", relief="solid"
+                                              , activebackground="DeepSkyBlue3", bg="DeepSkyBlue2", font="Arial 15")
 
     def start(self):
         try:
@@ -86,9 +95,26 @@ class Client(object):
         print(f"[Server] {data}")
         cmd, msg = library_protocol.disassemble_message(data)
         if cmd == server_commands["login_ok_cmd"]:
-            pass
+            self.login_try_counts = 0
+            self.main_lobby()
         elif cmd == server_commands["login_failed_cmd"]:
-            self.lbl1_message["text"] = "login has failed."
+            if msg == "":
+                self.lbl1_message["text"] = f"login has failed. you have {2 - self.login_try_counts} attempts to login"
+            else:
+                self.lbl1_message["text"] = msg
+            print("login failed")
+            self.login_try_counts += 1
+            if self.login_try_counts == 3:
+                self.login_btn["state"] = tk.DISABLED
+                self.entry_username["state"] = tk.DISABLED
+                self.entry_password["state"] = tk.DISABLED
+        elif cmd == server_commands["sign_up_ok_cmd"]:
+            self.lbl2_message["text"] = "Register succeeded"
+            time.sleep(1.2)
+            self.close_sign_up_lobby()
+            self.login_lobby()
+        elif cmd == server_commands["sign_up_failed_cmd"]:
+            self.lbl2_message["text"] = msg
 
     def login_lobby(self):
         self.lbl_welcome.pack(pady=50)
@@ -181,6 +207,25 @@ class Client(object):
             case "sign_up_lobby":
                 self.close_sign_up_lobby()
                 self.login_lobby()
+            case "main_lobby":
+                self.close_main_lobby()
+                self.send_messages(conn, client_commands["logout_cmd"])
+                self.login_lobby()
+
+    def main_lobby(self):
+        self.close_login_lobby()
+        self.current_lobby = "main_lobby"
+        self.lbl_welcome_main_lobby["text"] = f"Welcome {self.username} to the main lobby!"
+        self.lbl_welcome_main_lobby.pack(side=tk.TOP, pady=20)
+        self.back_btn.place(x=self.root.winfo_screenwidth() - 100, y=20)
+        self.profile_btn.place(x=self.root.winfo_screenwidth() // 2 - 200, y=self.root.winfo_screenheight() // 2)
+        self.game_rooms_lobby_btn.place(x=self.root.winfo_screenwidth() // 2 + 25, y=self.root.winfo_screenheight() // 2)
+
+    def close_main_lobby(self):
+        self.lbl_welcome_main_lobby.pack_forget()
+        self.back_btn.place_forget()
+        self.profile_btn.place_forget()
+        self.game_rooms_lobby_btn.place_forget()
 
 
 if __name__ == "__main__":
