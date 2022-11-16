@@ -88,6 +88,8 @@ class Server(object):
                 return
             except KeyError:  # if the player is between the main server to the games rooms server
                 return
+        elif cmd == client_commands["get_profile_cmd"]:
+            to_send, msg_to_send = self.profile_info(conn, con)
         to_send = library_protocol.build_message(to_send, msg_to_send)
         print(f"[Server] -> [{conn.getpeername()}] {to_send}")
         conn.sendall(to_send.encode())
@@ -99,7 +101,7 @@ class Server(object):
         :return: True - the login succeeded, False - the login failed
         """
         username_input, password_input = msg.split("#", 1)
-        if (not library_protocol.check_username_validation(username_input)) or password_input == "" or\
+        if (not library_protocol.check_username_validation(username_input)) or password_input == "" or \
                 password_input is None:
             return False, ""
         if username_input in map(lambda client: client[-1], login_dict.values()):
@@ -135,6 +137,14 @@ class Server(object):
         con.commit()
         cur.close()
         return server_commands["sign_up_ok_cmd"], "registering has succeeded"
+
+    def profile_info(self, conn, con):
+        cur = con.cursor()
+        cur.execute("SELECT played_games, wins FROM 'Users' WHERE Username = ?",
+                    (login_dict[conn][1],))  # the comma is for making the parameter a tuple and not char
+        msg = cur.fetchall()
+        cur.close()
+        return server_commands["get_profile_ok"], f"{msg[0][0]}#{msg[0][1]}"
 
 
 if __name__ == "__main__":

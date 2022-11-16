@@ -58,6 +58,17 @@ class Client(object):
         self.game_rooms_lobby_btn = tk.Button(self.root, text="Game rooms lobby", relief="solid"
                                               , activebackground="DeepSkyBlue3", bg="DeepSkyBlue2", font="Arial 15")
 
+        # profile lobby
+        self.canvas = tk.Canvas(self.root, width=self.root.winfo_screenwidth()
+                                , height=self.root.winfo_screenheight() - 200, background="#2596be"
+                                , highlightbackground="#2596be")
+        # root, screen width, screen height
+        self.lbl_profile_message = tk.Label(self.root, font="Arial 35", bg="#2596be")
+        self.lbl_games_played = tk.Label(self.root, text="Games played: ", font="Arial 16", bg="grey")
+        self.lbl_statistics = tk.Label(self.root, text="My statistics", font="Arial 22", bg="grey")
+        self.lbl_games_wins = tk.Label(self.root, text="Win Games: ", font="Arial 16", bg="grey")
+        self.lbl_account_data = tk.Label(self.root, text="My account data", font="Arial 22", bg="grey")
+
     def start(self):
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,6 +82,7 @@ class Client(object):
             self.create_account_btn["command"] = lambda: self.sign_up_lobby()
             self.register_account_btn["command"] = lambda: self.register_account(client_socket)
             self.back_btn["command"] = lambda: self.back_to_the_menu(client_socket)
+            self.profile_btn["command"] = lambda: self.profile_lobby(client_socket)
 
             self.login_lobby()
             self.root.mainloop()
@@ -115,8 +127,13 @@ class Client(object):
             self.login_lobby()
         elif cmd == server_commands["sign_up_failed_cmd"]:
             self.lbl2_message["text"] = msg
+        elif cmd == server_commands["get_profile_ok"]:
+            games_played, games_win = msg.split("#")
+            self.lbl_games_played["text"] = "Games played: " + games_played
+            self.lbl_games_wins["text"] = "Win Games: " + games_win
 
     def login_lobby(self):
+        self.current_lobby = "login"
         self.lbl_welcome.pack(pady=50)
         self.enter_name.pack(pady=20)
         self.entry_username.pack()
@@ -211,9 +228,13 @@ class Client(object):
                 self.close_main_lobby()
                 self.send_messages(conn, client_commands["logout_cmd"])
                 self.login_lobby()
+            case "profile_lobby":
+                self.close_profile_lobby()
+                self.main_lobby()
 
     def main_lobby(self):
-        self.close_login_lobby()
+        if self.current_lobby == "login":
+            self.close_login_lobby()
         self.current_lobby = "main_lobby"
         self.lbl_welcome_main_lobby["text"] = f"Welcome {self.username} to the main lobby!"
         self.lbl_welcome_main_lobby.pack(side=tk.TOP, pady=20)
@@ -223,9 +244,30 @@ class Client(object):
 
     def close_main_lobby(self):
         self.lbl_welcome_main_lobby.pack_forget()
-        self.back_btn.place_forget()
+        if self.current_lobby != "profile_lobby":
+            self.back_btn.place_forget()
         self.profile_btn.place_forget()
         self.game_rooms_lobby_btn.place_forget()
+
+    def profile_lobby(self, conn):
+        self.current_lobby = "profile_lobby"
+        self.close_main_lobby()
+        self.lbl_profile_message["text"] = f"{self.username}'s Profile"
+        self.lbl_profile_message.pack(side=tk.TOP)
+        self.canvas.pack(pady=50)
+        self.canvas.create_rectangle(int(self.root.winfo_screenwidth() * (1/5)), 50, self.root.winfo_screenwidth() - int(self.root.winfo_screenwidth() * (1/5)), 400, fill="grey", outline="black")
+        self.lbl_statistics.place(x=self.root.winfo_screenwidth() // 2 - 70, y=160)
+        self.lbl_games_played.place(x=int(self.root.winfo_screenwidth() * (1/5)) + 30, y=250)
+        self.lbl_games_wins.place(x=int(self.root.winfo_screenwidth() * (1/5)) + 30, y=350)
+        self.send_messages(conn, client_commands["get_profile_cmd"])
+
+    def close_profile_lobby(self):
+        self.lbl_profile_message.pack_forget()
+        self.canvas.pack_forget()
+        self.lbl_statistics.place_forget()
+        self.lbl_games_played.place_forget()
+        self.lbl_games_wins.place_forget()
+        self.lbl_account_data.place_forget()
 
 
 if __name__ == "__main__":
