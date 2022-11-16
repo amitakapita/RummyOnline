@@ -81,7 +81,9 @@ class Client(object):
         self.scrollbar = tk.Scrollbar(self.scrollbar_frame, orient=tk.VERTICAL)
         self.game_rooms_lobby_lbl = tk.Label(self.root, font="Arial 35", bg="#2596be", text="Game rooms lobby")
         self.game_rooms_lobby_canvas = tk.Canvas(self.scrollbar_frame, bg="#2596be", highlightbackground="#2596be",
-                                                 highlightcolor="#2596be", highlightthickness=2, height=self.root.winfo_screenheight() // 1.2, width=self.root.winfo_screenwidth() // 2.543)
+                                                 highlightcolor="#2596be", highlightthickness=2,
+                                                 height=self.root.winfo_screenheight() // 1.2,
+                                                 width=self.root.winfo_screenwidth() // 2.543)
         self.game_rooms_lobby_canvas.configure(scrollregion=(300, 150, 900, 755))
         self.game_rooms_lobby_canvas.bind("<MouseWheel>", self.on_mousewheel)
         self.refresh_button = tk.Button(self.root, bg="#70ad47", text="Refresh", relief="solid", font="Arial 18")
@@ -91,6 +93,19 @@ class Client(object):
         self.from_main_lobby = False
         self.is_active = False
         self.from_lobby_game_waiting_or_in_actual_game = False
+
+        # create lobby room menu
+        self.lobby_name_game_room_lbl = tk.Label(self.root, font="Arial 25", bg="#2596be")  # 30 28 26
+        self.game_room_lobby_create_canvas = tk.Canvas(self.root, bg="#d0cece", width=self.root.winfo_screenwidth() // 2.742, height=300,
+                                                       highlightcolor="black", highlightbackground="black")
+        self.maximum_players_entry = tk.Entry(self.root, bg="#AFABAB", font="Arial 20")
+        self.maximum_players_lbl = tk.Label(self.root, bg="#d0cece", font="Arial 20",
+                                            text="Maximum participants: {2-4}")
+        self.create_lobby_game_room_create_button = tk.Button(self.root, bg="#70ad47", text="Create lobby",
+                                                              font="Arial 15", relief="solid")
+        self.number_players_not_valid = tk.Label(self.root, bg="#d0cece", font="Arial 15",
+                                                 text="The maximum players should be between 2 (include 2) to 4 ("
+                                                      "include 4)")
 
     def start(self):
         try:
@@ -107,6 +122,7 @@ class Client(object):
             self.back_btn["command"] = lambda: self.back_to_the_menu(client_socket)
             self.profile_btn["command"] = lambda: self.profile_lobby(client_socket)
             self.game_rooms_lobby_btn["command"] = lambda: self.game_rooms_lobby_menu(client_socket)
+            self.create_lobby_game_room_button["command"] = lambda: self.create_lobby_game_room()
 
             self.login_lobby()
             self.root.mainloop()
@@ -253,6 +269,9 @@ class Client(object):
             case "game_rooms_lobby":
                 self.close_game_rooms_lobby_menu()
                 self.main_lobby()
+            case "creating_game_lobby_room":
+                self.close_create_lobby_game_room()
+                self.game_rooms_lobby_menu(conn)
 
     def main_lobby(self):
         if self.current_lobby == "login":
@@ -318,6 +337,25 @@ class Client(object):
         self.game_rooms_lobby_canvas.pack_forget()
         self.create_lobby_game_room_button.place_forget()
         self.refresh_button.place_forget()
+
+    def create_lobby_game_room(self):
+        self.current_lobby = "creating_game_lobby_room"
+        self.close_game_rooms_lobby_menu()
+        self.lobby_name_game_room_lbl["text"] = f"Waiting room - {self.username}'s lobby"
+        self.lobby_name_game_room_lbl.pack(padx=450, pady=20, side=tk.TOP)
+        self.game_room_lobby_create_canvas.pack(pady=50)
+        self.maximum_players_lbl.place(x=self.root.winfo_screenwidth() // 3.047, y=180)
+        self.maximum_players_entry.place(x=self.root.winfo_screenwidth() // 3.047, y=225)
+        self.create_lobby_game_room_create_button.place(x=self.root.winfo_screenwidth() // 2 - 50, y=380)
+
+    def close_create_lobby_game_room(self):
+        if self.current_lobby != "waiting_game_room_lobby":
+            self.lobby_name_game_room_lbl.pack_forget()
+        self.game_room_lobby_create_canvas.pack_forget()
+        self.maximum_players_entry.place_forget()
+        self.maximum_players_lbl.place_forget()
+        self.create_lobby_game_room_create_button.place_forget()
+        self.number_players_not_valid.place_forget()
 
 
 if __name__ == "__main__":
