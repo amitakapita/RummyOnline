@@ -12,6 +12,61 @@ wait_login = {}  # {client_socket: client_address, code, username}  # code and u
 login_dict = {}  # {client_socket: wait_login[client_socket][0], username}
 
 
+def check_login(conn, msg, con):
+    """
+    checks the login attempt
+    :rtype: bool
+    :return: True - the login succeeded, False - the login failed
+    """
+    username_input, password_input = msg.split("#", 1)
+    if (not library_protocol.check_username_validation(username_input)) or password_input == "" or \
+            password_input is None:
+        return False, ""
+    if username_input in map(lambda client: client[-1], login_dict.values()):
+        return False, "the account is already logged in"  # username is already logged in
+    cur = con.cursor()
+    cur.execute("SELECT * FROM Users WHERE Username = ? and Password = ?", (username_input, password_input))
+    x = cur.fetchall()
+    if x:
+        login_dict[conn] = wait_login[conn], username_input
+        del wait_login[conn]
+        cur.close()
+        return True, ""
+    cur.close()
+    return False, ""
+
+
+def register_check(msg, con):
+    username, password, confirm_password = msg.split("#")
+    if len(password) < 4 or len(confirm_password) < 4:
+        return server_commands["sign_up_failed_cmd"], "The password is too short."
+    elif password != confirm_password:
+        return server_commands["sign_up_failed_cmd"], "The passwords does not match each other"
+    if not library_protocol.check_username_validation(username):
+        return server_commands["sign_up_failed_cmd"], "The username should be in letters a-z, A-Z, 0-9 include."
+    cur = con.cursor()
+    cur.execute("SELECT Username FROM Users WHERE Username = ?",
+                (username,))  # the comma is for making the parameter a tuple and not char
+    if cur.fetchall():
+        cur.close()
+        return server_commands["sign_up_failed_cmd"], "The username is already taken."
+    cur.execute(
+        "INSERT INTO Users (Username, Password, wins, played_games) values (?, ?, ?, ?)",
+        (username, password, 0, 0))
+    con.commit()
+    cur.close()
+    return server_commands["sign_up_ok_cmd"], "registering has succeeded"
+
+
+def profile_info(conn, con):
+    cur = con.cursor()
+    cur.execute("SELECT played_games, wins FROM 'Users' WHERE Username = ?",
+                (login_dict[conn][1],))  # the comma is for making the parameter a tuple and not char
+    msg = cur.fetchall()
+    cur.close()
+    return server_commands["get_profile_ok"], f"{msg[0][0]}#{msg[0][1]}"
+
+
 class Server(object):
 
     def __init__(self, ip1, port1):
@@ -75,11 +130,11 @@ class Server(object):
         cmd, msg = library_protocol.disassemble_message(request)
         to_send, msg_to_send = "", ""
         if cmd == client_commands["login_cmd"]:
-            to_send, msg_to_send = self.check_login(conn, msg, con)
+            to_send, msg_to_send = check_login(conn, msg, con)
             to_send = server_commands["login_ok_cmd"] if to_send \
                 else server_commands["login_failed_cmd"]
         elif cmd == client_commands["sign_up_cmd"]:
-            to_send, msg_to_send = self.register_check(msg, con)
+            to_send, msg_to_send = register_check(msg, con)
         elif cmd == client_commands["logout_cmd"]:
             try:
                 wait_login[conn] = login_dict[conn][0]  # only the peer name
@@ -89,62 +144,10 @@ class Server(object):
             except KeyError:  # if the player is between the main server to the games rooms server
                 return
         elif cmd == client_commands["get_profile_cmd"]:
-            to_send, msg_to_send = self.profile_info(conn, con)
+            to_send, msg_to_send = profile_info(conn, con)
         to_send = library_protocol.build_message(to_send, msg_to_send)
         print(f"[Server] -> [{conn.getpeername()}] {to_send}")
         conn.sendall(to_send.encode())
-
-    def check_login(self, conn, msg, con):
-        """
-        checks the login attempt
-        :rtype: bool
-        :return: True - the login succeeded, False - the login failed
-        """
-        username_input, password_input = msg.split("#", 1)
-        if (not library_protocol.check_username_validation(username_input)) or password_input == "" or \
-                password_input is None:
-            return False, ""
-        if username_input in map(lambda client: client[-1], login_dict.values()):
-            return False, "the account is already logged in"  # username is already logged in
-        cur = con.cursor()
-        cur.execute("SELECT * FROM Users WHERE Username = ? and Password = ?", (username_input, password_input))
-        x = cur.fetchall()
-        if x:
-            login_dict[conn] = wait_login[conn], username_input
-            del wait_login[conn]
-            cur.close()
-            return True, ""
-        cur.close()
-        return False, ""
-
-    def register_check(self, msg, con):
-        username, password, confirm_password = msg.split("#")
-        if len(password) < 4 or len(confirm_password) < 4:
-            return server_commands["sign_up_failed_cmd"], "The password is too short."
-        elif password != confirm_password:
-            return server_commands["sign_up_failed_cmd"], "The passwords does not match each other"
-        if not library_protocol.check_username_validation(username):
-            return server_commands["sign_up_failed_cmd"], "The username should be in letters a-z, A-Z, 0-9 include."
-        cur = con.cursor()
-        cur.execute("SELECT Username FROM Users WHERE Username = ?",
-                    (username,))  # the comma is for making the parameter a tuple and not char
-        if cur.fetchall():
-            cur.close()
-            return server_commands["sign_up_failed_cmd"], "The username is already taken."
-        cur.execute(
-            "INSERT INTO Users (Username, Password, wins, played_games) values (?, ?, ?, ?)",
-            (username, password, 0, 0))
-        con.commit()
-        cur.close()
-        return server_commands["sign_up_ok_cmd"], "registering has succeeded"
-
-    def profile_info(self, conn, con):
-        cur = con.cursor()
-        cur.execute("SELECT played_games, wins FROM 'Users' WHERE Username = ?",
-                    (login_dict[conn][1],))  # the comma is for making the parameter a tuple and not char
-        msg = cur.fetchall()
-        cur.close()
-        return server_commands["get_profile_ok"], f"{msg[0][0]}#{msg[0][1]}"
 
 
 if __name__ == "__main__":
