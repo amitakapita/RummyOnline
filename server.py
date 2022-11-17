@@ -145,6 +145,9 @@ class Server(object):
                 return
         elif cmd == client_commands["get_profile_cmd"]:
             to_send, msg_to_send = profile_info(conn, con)
+        elif cmd == client_commands["create_game_room_lobby_cmd"]:
+            if "2" <= msg <= "4":
+                to_send = server_commands["create_room_game_lobby_ok_cmd"]
         to_send = library_protocol.build_message(to_send, msg_to_send)
         print(f"[Server] -> [{conn.getpeername()}] {to_send}")
         conn.sendall(to_send.encode())
