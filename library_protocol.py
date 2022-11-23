@@ -1,3 +1,6 @@
+import json
+
+
 client_commands = {
     "login_cmd": "LOGIN",
     "logout_cmd": "LOGOUT",
@@ -24,9 +27,21 @@ server_commands = {
     "join_player_game_room_server_ok_cmd": "JP_GR_OK",
     "join_player_game_room_server_failed_cmd": "JP_GR_FAILED",
     "create_room_game_lobby_failed_cmd": "CR_FAILED",
-    "verify_ok_cmd": "VERIFY_OK",
-    "verify_failed_cmd": "VERIFY_FAILED"
+    # game rooms commands:
+    "join_player_ok_cmd": "JOIN_PLAYER_OK",
+    "join_player_failed_cmd": "JOIN_PL_FAILED",
+    "get_players_information_ok": "GET_PL_IN_OK",
+    "start_game_ok": "START_GAME_OK",
+    "close_lobby_ok_cmd": "CLOSE_LOBBY_OK",
+    "leave_player_ok_cmd": "LEAVE_PLAYER_OK",
+    "buy_building_ok_cmd": "BUY_BUILDING_OK",
+    "buy_building_failed_cmd": "BUY_BLFA",
+    "pulled_cubes_cmd": "PULLED_CUBES",
+    "turn_who_cmd": "TURN_WHO",
+    "update_points_cmd": "UP_POINTS",
+    "Wined_cmd": "WINS"
 }
+
 
 def build_message(cmd, msg=""):
     """
@@ -64,3 +79,8 @@ def check_username_validation(username):
         if not ("a" <= char <= "z" or "A" <= char <= "Z" or "0" <= char <= "9"):
             return False
     return True
+
+
+class BitInfoGameEncoder(json.JSONEncoder):
+    def default(self, o):
+        return o.__dict__

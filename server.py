@@ -5,11 +5,17 @@ import threading
 import json
 from library_protocol import client_commands, server_commands
 import time
+from player import Player
 
 # data bases
 wait_login = {}  # {client_socket: client_address, code, username}  # code and username are when the client succeeded
 # to log in with username and password # or {client_socket: client_address, username}}
 login_dict = {}  # {client_socket: wait_login[client_socket][0], username}
+game_rooms_dict = {}  # {creator: [max_players, players, is_started]}
+colors = ["firebrick4", "SteelBlue4", "chartreuse4", "#DBB600"]
+dict_colors = {"firebrick4": "red", "SteelBlue4": "blue", "chartreuse4": "green", "#DBB600": "yellow"}
+dict_colors1 = {"red": "firebrick4", "blue": "SteelBlue4", "green": "chartreuse4", "yellow": "#DBB600"}
+game_room_players_dict = {}  # {creator: [Players: list]}
 
 
 def check_login(conn, msg, con):
@@ -67,12 +73,31 @@ def profile_info(conn, con):
     return server_commands["get_profile_ok"], f"{msg[0][0]}#{msg[0][1]}"
 
 
+def lobby_rooms():
+    lobby_rooms1 = json.dumps(game_rooms_dict)
+    print(lobby_rooms1)
+    return server_commands["get_lr_ok_cmd"], lobby_rooms1
+
+
+def join_a_player_to_game_room(conn, creator):
+    try:
+        if game_rooms_dict[creator][0] <= len(game_rooms_dict[creator][1]) or game_rooms_dict[creator][2]:
+            # full/started
+            return server_commands["join_player_game_room_server_failed_cmd"], \
+                   "game room lobby is full or the game has started"
+        game_rooms_dict[creator][1].append(login_dict[conn][1])
+        return server_commands["join_player_game_room_server_ok_cmd"], json.dumps(game_rooms_dict[creator][1])
+    except KeyError:
+        return server_commands["join_player_game_room_server_failed_cmd"], "no such game room lobby, try to refresh"
+
+
 class Server(object):
 
     def __init__(self, ip1, port1):
         self.ip = ip1
         self.port = port1
         self.amount_clients = 0
+        self.current_lobby_game = "waiting"  # waiting room/in game
 
     def start(self):
         try:
@@ -89,8 +114,8 @@ class Server(object):
                 wait_login[client_socket] = client_address
                 print(f"A new client has connected! {client_address}\n--------------------------------\nAmount: "
                       f"{self.amount_clients}\n--------------------------------\n"
-                      f"Waiting for login: {wait_login.values()}\n"
-                      f"Already logged in: {login_dict.values()}\n--------------------------------\n")
+                      f"Waiting for login: {list(wait_login.values())}\n"
+                      f"Already logged in: {list(login_dict.values())}\n--------------------------------\n")
                 self.handle_client(client_socket)
         except socket.error as e:
             print(e)
@@ -116,6 +141,13 @@ class Server(object):
             if conn in wait_login.keys():
                 del wait_login[conn]
             else:
+                if login_dict[conn][1] in game_rooms_dict.keys():  # there is a game room
+                    del game_rooms_dict[login_dict[conn][1]]
+                else:
+                    for creator, game_room in game_rooms_dict.items():
+                        # a player leaves the system and still in the game room
+                        if login_dict[conn][1] in game_room[1]:
+                            game_rooms_dict[creator][1].remove(login_dict[conn][1])
                 del login_dict[conn]
             print(f"client {conn.getpeername()} has exited.")
             conn.close()
@@ -148,9 +180,61 @@ class Server(object):
         elif cmd == client_commands["create_game_room_lobby_cmd"]:
             if "2" <= msg <= "4":
                 to_send = server_commands["create_room_game_lobby_ok_cmd"]
+                game_rooms_dict[login_dict[conn][1]] = [int(msg), [login_dict[conn][1]], False]
+                game_room_players_dict[login_dict[conn][1]] = [Player(color="red", conn=conn,
+                                                                      player_name=login_dict[conn][1],
+                                                                      creator=login_dict[conn][1])]
+        elif cmd == client_commands["get_lobby_rooms_cmd"]:
+            to_send, msg_to_send = lobby_rooms()
+        elif cmd == client_commands["join_game_room_cmd"]:
+            to_send, msg_to_send = join_a_player_to_game_room(conn, msg)
+            to_send1 = library_protocol.build_message(to_send, msg_to_send)
+            print(f"[Server] -> [{conn.getpeername()}] {to_send1}")
+            conn.sendall(to_send1.encode())
+            if to_send == server_commands["join_player_game_room_server_ok_cmd"]:
+                print(f"{login_dict[conn][0]} has been switched to game room {msg}")
+                game_rooms_dict[msg][1].append(login_dict[conn][1])  # adding player name
+                game_room_players_dict[msg].append(Player(color=list(dict_colors1.keys())[
+                    len(game_room_players_dict[msg])],
+                                                   conn=conn, player_name=login_dict[conn][1], creator=msg))
+            print(game_room_players_dict)
+            self.send_information_of_players(msg)
+            return
         to_send = library_protocol.build_message(to_send, msg_to_send)
         print(f"[Server] -> [{conn.getpeername()}] {to_send}")
         conn.sendall(to_send.encode())
+
+    def send_information_of_players(self, game_room_name, is_leave=False):
+        print(game_room_players_dict[game_room_name])
+        if not is_leave:
+            cmd_send = server_commands["join_player_ok_cmd"]
+        else:
+            cmd_send = server_commands["leave_player_ok_cmd"]
+        msg_send = self.players_information(game_room_name)
+        message = library_protocol.build_message(cmd_send, msg_send)
+        player: Player
+        for player in game_room_players_dict[game_room_name]:  # sends each player in the lobby
+            conn = player.conn
+            print(f"[Server] -> [Client {conn.getpeername()}] {message}")
+            conn.sendall(message.encode())
+
+    def players_information(self, game_room_name):
+        try:
+            list1 = []
+            player1: Player
+            for index, player1 in enumerate(game_room_players_dict[game_room_name]):
+                if player1.color != colors[index] and self.current_lobby_game == "waiting":
+                    player1.change_color(colors[index])
+                    list1.append((player1.player_name, player1.color))
+                elif self.current_lobby_game != "waiting" or player1.color == colors[index]:
+                    list1.append((player1.player_name, player1.color))
+            list1 = json.dumps(
+                list1 if list1 != [] else [(player_name.player_name, player_name.color) for player_name in
+                                           game_room_players_dict[game_room_name]])
+            return list1
+        except Exception as e1:
+            print(e1)
+            return ""
 
 
 if __name__ == "__main__":
