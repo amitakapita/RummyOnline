@@ -148,6 +148,8 @@ class Client(object):
                 client_socket)
             self.start_game_menu_button["command"] = lambda: send_messages(client_socket,
                                                                            client_commands["start_game_cmd"])
+            self.refresh_button["command"] = lambda: self.refresh_lobby_rooms(client_socket,
+                                                                              client_commands["get_lobby_rooms_cmd"])
 
             self.login_lobby()
             self.root.mainloop()
@@ -202,14 +204,18 @@ class Client(object):
             msg = json.loads(msg)
             print(msg)
             self.back_btn["state"] = tk.DISABLED
-            time.sleep(1)
-            self.waiting_room_lobby_menu(list_of_names=msg, from_creating=False)
+            time.sleep(0.5)
+            self.waiting_room_lobby_menu(list_of_names=msg, from_creating=False, conn=conn)
         elif cmd == server_commands["join_player_game_room_server_failed_cmd"]:
             self.message_failed_join_error_game["text"] = msg
-            self.message_failed_join_error_game.place(x=465, y=115)
+            self.message_failed_join_error_game.place(x=self.root.winfo_screenwidth() // 2, y=115, anchor=tk.CENTER)
         elif cmd == server_commands["join_player_ok_cmd"]:
             msg = json.loads(msg)
             self.update_list_of_players(msg)
+        elif cmd == server_commands["close_lobby_ok_cmd"]:
+            self.back_to_the_menu(conn)
+        elif cmd == server_commands["leave_player_ok_cmd"]:
+            self.update_list_of_players(json.loads(msg))
 
     def login_lobby(self):
         self.current_lobby = "login"
@@ -311,10 +317,17 @@ class Client(object):
                 self.close_profile_lobby()
                 self.main_lobby()
             case "game_rooms_lobby":
+                self.refresh_lobby_rooms(from_refresh=False)
                 self.close_game_rooms_lobby_menu()
                 self.main_lobby()
             case "creating_game_lobby_room":
+                self.refresh_lobby_rooms(from_refresh=False)
                 self.close_create_lobby_game_room()
+                self.game_rooms_lobby_menu(conn)
+            case "waiting_game_room_lobby":
+                self.close_waiting_room_menu()
+                self.back_btn["command"] = lambda: self.back_to_the_menu(conn)
+                self.back_btn["text"] = "Back"
                 self.game_rooms_lobby_menu(conn)
 
     def main_lobby(self):
@@ -344,7 +357,7 @@ class Client(object):
         self.canvas.create_rectangle(int(self.root.winfo_screenwidth() * (1 / 5)), 50,
                                      self.root.winfo_screenwidth() - int(self.root.winfo_screenwidth() * (1 / 5)), 400,
                                      fill="grey", outline="black")
-        self.lbl_statistics.place(x=self.root.winfo_screenwidth() // 2 - 70, y=160)
+        self.lbl_statistics.place(x=self.root.winfo_screenwidth() // 2, y=160, anchor=tk.N)
         self.lbl_games_played.place(x=int(self.root.winfo_screenwidth() * (1 / 5)) + 30, y=250)
         self.lbl_games_wins.place(x=int(self.root.winfo_screenwidth() * (1 / 5)) + 30, y=350)
         send_messages(conn, client_commands["get_profile_cmd"])
@@ -381,6 +394,7 @@ class Client(object):
         self.game_rooms_lobby_canvas.pack_forget()
         self.create_lobby_game_room_button.place_forget()
         self.refresh_button.place_forget()
+        self.message_failed_join_error_game.place_forget()
 
     def create_lobby_game_room(self):
         self.current_lobby = "creating_game_lobby_room"
@@ -391,7 +405,7 @@ class Client(object):
         self.game_room_lobby_create_canvas.pack(pady=50)
         self.maximum_players_lbl.place(x=self.root.winfo_screenwidth() // 3.047, y=180)
         self.maximum_players_entry.place(x=self.root.winfo_screenwidth() // 3.047, y=225)
-        self.create_lobby_game_room_create_button.place(x=self.root.winfo_screenwidth() // 2 - 50, y=380)
+        self.create_lobby_game_room_create_button.place(x=self.root.winfo_screenwidth() // 2, y=380, anchor=tk.CENTER)
 
     def close_create_lobby_game_room(self):
         if self.current_lobby != "waiting_game_room_lobby":
@@ -401,6 +415,7 @@ class Client(object):
         self.maximum_players_lbl.place_forget()
         self.create_lobby_game_room_create_button.place_forget()
         self.number_players_not_valid.place_forget()
+        self.create_lobby_game_room_create_button["state"] = tk.NORMAL
 
     def send_create_game_room_lobby(self, conn):
         maximum_players1 = self.maximum_players_entry.get()
@@ -413,19 +428,20 @@ class Client(object):
         else:
             self.number_players_not_valid.place(x=self.root.winfo_screenwidth() // 3.047, y=270)
 
-    def waiting_room_lobby_menu(self, list_of_names: list, from_creating=True, conn=None):
+    def waiting_room_lobby_menu(self, conn, list_of_names: list, from_creating=True):
         space = 0
         self.current_lobby = "waiting_game_room_lobby"
         if from_creating and conn is not None:  # what the display is for the creator of the room
-            self.participants_lbl.place(x=self.root.winfo_screenwidth() // 2 - 40, y=280)
+            self.close_create_lobby_game_room()
+            self.participants_lbl.place(x=self.root.winfo_screenwidth() // 2, y=280, anchor=tk.N)
             self.waiting_to_start_lbl.pack(padx=400, pady=40, side=tk.TOP)
             self.waiting_room_lobby_menu_canvas.pack(pady=150)
             self.back_btn["state"] = tk.NORMAL
-            self.close_create_lobby_game_room()
             self.back_btn["text"] = "Close lobby"
+            self.back_btn["command"] = lambda: self.leave_room_game_lobby(conn, list_of_names[0][0])  # name_creator
             self.start_game_menu_button["state"] = tk.DISABLED
-            self.start_game_menu_button.place(x=self.root.winfo_screenwidth() // 2 - 30, y=550)
-            # self.start_game_menu_button["command"] = lambda: send_messages(conn, client_commands["start_game_cmd"])
+            self.start_game_menu_button.place(x=self.root.winfo_screenwidth() // 2, y=550, anchor=tk.N)
+            self.start_game_menu_button["command"] = lambda: send_messages(conn, client_commands["start_game_cmd"])
             self.waiting_to_start_lbl["text"] = f"Waiting for {list_of_names[0][0]} to start the game"
             for name_and_color in list_of_names:
                 (name, color) = name_and_color[0], name_and_color[1]
@@ -438,13 +454,13 @@ class Client(object):
             self.back_btn["state"] = tk.NORMAL
             self.close_game_rooms_lobby_menu()
             self.back_btn["text"] = "Leave Room"
-            self.participants_lbl.place(x=self.root.winfo_screenwidth() // 2 - 40, y=360)
-            self.name_leader["text"] = f"Waiting room - {list_of_names[0][0]}'s lobby"
+            self.participants_lbl.place(x=self.root.winfo_screenwidth() // 2, y=360, anchor=tk.N)
+            self.name_leader["text"] = f"Waiting room - {list_of_names[0]}'s lobby"
             self.name_leader.pack(padx=450, pady=20, side=tk.TOP)
             self.waiting_to_start_lbl["text"] = f"Waiting for {list_of_names[0]} to start the game"
             self.waiting_to_start_lbl.pack(padx=400, pady=40, side=tk.TOP)
             self.waiting_room_lobby_menu_canvas.pack(pady=150)
-            self.back_btn["command"] = lambda: self.leave_room_game_lobby(conn)
+            self.back_btn["command"] = lambda: self.leave_room_game_lobby(conn, list_of_names[0])  # name creator
             for index, names in enumerate(list_of_names):
                 (name, color) = names, colors[index]
                 self.waiting_room_lobby_menu_canvas.create_text(int(self.waiting_room_lobby_menu_canvas["width"]) // 2,
@@ -452,8 +468,9 @@ class Client(object):
                                                                 state=tk.DISABLED)
                 space += 30
 
-    def leave_room_game_lobby(self, conn):
-        send_messages(conn, client_commands["leave_my_player_cmd"])
+    def leave_room_game_lobby(self, conn, creator_name: str):
+        # error with the creator name somehow
+        send_messages(conn, client_commands["leave_my_player_cmd"], creator_name)
         self.back_to_the_menu(conn)
 
     def show_game_rooms(self, game_rooms_dict, conn):
@@ -502,6 +519,36 @@ class Client(object):
                 self.start_game_menu_button["state"] = tk.NORMAL
             else:
                 self.start_game_menu_button["state"] = tk.DISABLED
+
+    def close_waiting_room_menu(self):
+        self.lobby_name_game_room_lbl.pack_forget()
+        self.start_game_menu_button.place_forget()
+        self.waiting_room_lobby_menu_canvas.delete("all")
+        self.waiting_room_lobby_menu_canvas.pack_forget()
+        self.waiting_to_start_lbl.pack_forget()
+        self.participants_lbl.place_forget()
+        self.name_leader.pack_forget()
+
+    def refresh_lobby_rooms(self, conn=None, from_refresh=True):
+        if from_refresh:
+            self.message_failed_join_error_game.place_forget()  # even if the label is not placed it won't do an error
+            self.game_rooms_lobby_canvas.delete("all")
+            send_messages(conn, client_commands["get_lobby_rooms_cmd"])
+        self.refresh_button["state"] = tk.DISABLED
+        self.from_creating = True
+        self.from_main_lobby = True
+        self.from_lobby_game_waiting_or_in_actual_game = True
+        if not self.is_active:
+            self.root.after(5000,
+                            lambda: self.set_refresh_button_enabled())  # self.refresh_button disabled for 5 seconds
+            self.is_active = True
+
+    def set_refresh_button_enabled(self):
+        self.refresh_button["state"] = tk.NORMAL
+        self.from_creating = False
+        self.from_main_lobby = False
+        self.is_active = False
+        self.from_lobby_game_waiting_or_in_actual_game = False
 
 
 if __name__ == "__main__":
