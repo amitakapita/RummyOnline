@@ -7,17 +7,29 @@ import traceback
 from library_protocol import client_commands, server_commands
 import time
 import json
+import random
 
 # constants
 colors = ["firebrick4", "SteelBlue4", "chartreuse4", "#DBB600"]
 dict_colors = {"firebrick4": "red", "SteelBlue4": "blue", "chartreuse4": "green", "#DBB600": "yellow"}
 dict_colors1 = {"red": "firebrick4", "blue": "SteelBlue4", "green": "chartreuse4", "yellow": "#DBB600"}
+colors_cards = ["red", "blue", "green", "black"]
 
 
 def send_messages(conn, data, msg=""):
     message = library_protocol.build_message(data, msg)
     print(f"[Client] {message}\n--------------------------------\n")
     conn.sendall(message.encode())
+
+
+def hover_enter(event):
+    btn1 = event.widget
+    btn1.configure(bd=5, bg="#7A5530")
+
+
+def hover_leave(event):
+    btn1 = event.widget
+    btn1.configure(bd=2, bg="#996C3D")
 
 
 class Client(object):
@@ -128,6 +140,73 @@ class Client(object):
         self.temp_information_about_the_room = []
         self.is_first_time_getting_players = True
 
+        # in-game
+        space = 20
+        spacey = 30
+        self.cards: list[tk.Button]
+        self.cards = []
+        self.clicked = []
+        self.get_cards: list[tk.Button] = []
+        self.frame = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid", width=1020, height=450)
+        self.declare_vct_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
+                                         font="Arial 14", text="Declare Victory")
+        self.frame_get_cards = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid", width=250, height=300)
+        self.change_card_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
+                                         font="Arial 14", text="Change Card")
+        self.lbl_cards = tk.Label(self.frame_get_cards, font="Arial 15", text="Get            Change", bg="#2596be")
+        self.turn_who = tk.Label(self.root, font="Arial 15", bg="#2596be")
+        self.not_change_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2", font="Arial 14", text="Don't want this card")
+        self.win_label = tk.Label(self.root, font="Arial 15", bg="#2596be")
+        self.at_change = True
+
+        # cards and more in-game
+        for _ in range(4):
+            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+            btn.place(x=space, y=spacey)
+            self.cards.append(btn)
+            space += 120
+        space += 150
+        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+        btn.place(x=space, y=spacey)
+        self.cards.append(btn)
+        for _ in range(2):
+            space += 120
+            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+            btn.place(x=space, y=spacey)
+            self.cards.append(btn)
+        spacey += 210
+        space = 20
+        for _ in range(4):
+            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2,
+                            font="Arial 42", disabledforeground="black",
+                            activebackground="#A01E50")
+            btn.place(x=space, y=spacey)
+            self.cards.append(btn)
+            space += 120
+        space += 150
+        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+        btn.place(x=space, y=spacey)
+        self.cards.append(btn)
+        for _ in range(2):
+            space += 120
+            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2,
+                            font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+            btn.place(x=space, y=spacey)
+            self.cards.append(btn)
+
+        space = 10
+        spacey = 100
+        lbl1 = tk.Label(self.frame_get_cards, font="Arial 15", text="Get            Change", bg="#2596be")
+        lbl1.place(x=40, y=20)
+        for i in range(2):
+            btn = tk.Button(self.frame_get_cards, relief="solid", bg="#996C3D", width=3, height=2, bd=2,
+                            font="Arial 42", activebackground="#A01E50", state=tk.DISABLED)
+            btn.place(x=space, y=spacey)
+            self.get_cards.append(btn)
+            self.cards.append(btn)
+            space += 120
+        # self.cards[-2]["text"] = str(random.randint(1, 13))
+
     def start(self):
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -150,6 +229,9 @@ class Client(object):
                                                                            client_commands["start_game_cmd"])
             self.refresh_button["command"] = lambda: self.refresh_lobby_rooms(client_socket,
                                                                               client_commands["get_lobby_rooms_cmd"])
+            self.change_card_btn["command"] = lambda: send_messages(client_socket, client_commands["send_card_cmd"])
+            self.not_change_btn["command"] = lambda: self.not_even_change_card(client_socket)
+            self.declare_vct_btn["command"] = lambda: self.send_to_check_win(client_socket)
 
             self.login_lobby()
             self.root.mainloop()
@@ -216,6 +298,39 @@ class Client(object):
             self.back_to_the_menu(conn)
         elif cmd == server_commands["leave_player_ok_cmd"]:
             self.update_list_of_players(json.loads(msg))
+        elif cmd == server_commands["start_game_ok"]:
+            self.start_game(json.loads(msg), conn)
+        elif cmd == server_commands["send_card_ok_cmd"]:
+            msg = json.loads(msg)
+            if msg[2]:
+                self.get_card(msg[0], msg[1], conn, is_start_turn=False)
+            else:
+                self.change_card(msg[0], msg[1], conn)
+        elif cmd == server_commands["pass_card_ok_cmd"]:
+            msg = json.loads(msg)
+            self.get_card(msg[0], msg[1], conn)
+        elif cmd == server_commands["turn_of_cmd"]:
+            msg = json.loads(msg)
+            self.turn_who.configure(text=f"Turn of {msg[0]}", fg=msg[1])
+        elif cmd == server_commands["win_cmd"]:
+            msg = msg.split("#")
+            self.win_label.configure(text=f"{msg[0]} Wins", fg=msg[1])
+            self.win_label.place(x=self.root.winfo_screenwidth() // 2, y = 70)
+            self.declare_vct_btn["state"] = tk.DISABLED
+            self.change_card_btn["state"] = tk.DISABLED
+            self.not_change_btn["state"] = tk.DISABLED
+            for card in self.cards:
+                card.unbind("<Leave>")
+                card.unbind("<Enter>")
+                card.unbind("<Button>")
+        elif cmd == server_commands["win_fail_cmd"]:
+            self.win_label.configure(text="Win check failed", fg="black")
+            self.win_label.place(x=self.root.winfo_screenwidth() // 2 - 50, y=70)
+            self.root.after(5000, lambda: self.win_label.place_forget())
+            if not self.at_change:
+                self.change_card_btn["state"] = tk.NORMAL
+            else:
+                self.not_change_btn["state"] = tk.NORMAL
 
     def login_lobby(self):
         self.current_lobby = "login"
@@ -299,9 +414,7 @@ class Client(object):
             self.lbl2_message["text"] = "the password does not match the confirmed password"
         else:
             data, msg = client_commands["sign_up_cmd"], "{}#{}#{}".format(self.username, hashlib.sha256(
-                self.password.encode()).hexdigest(),
-                                                                          hashlib.sha256(self.confirmed_password.encode(
-                                                                          )).hexdigest())
+                self.password.encode()).hexdigest(), hashlib.sha256(self.confirmed_password.encode()).hexdigest())
             send_messages(conn, data, msg)
 
     def back_to_the_menu(self, conn):
@@ -326,6 +439,11 @@ class Client(object):
                 self.game_rooms_lobby_menu(conn)
             case "waiting_game_room_lobby":
                 self.close_waiting_room_menu()
+                self.back_btn["command"] = lambda: self.back_to_the_menu(conn)
+                self.back_btn["text"] = "Back"
+                self.game_rooms_lobby_menu(conn)
+            case "game":
+                self.close_game_room()
                 self.back_btn["command"] = lambda: self.back_to_the_menu(conn)
                 self.back_btn["text"] = "Back"
                 self.game_rooms_lobby_menu(conn)
@@ -549,6 +667,148 @@ class Client(object):
         self.from_main_lobby = False
         self.is_active = False
         self.from_lobby_game_waiting_or_in_actual_game = False
+
+    def clicked_on(self, event, conn):
+        btn1 = event.widget
+        if btn1['bg'] != '#A01E50':  # chosen
+            btn1.unbind("<Leave>")
+            btn1.unbind("<Enter>")
+            btn1.configure(bg="#A01E50", bd=5)
+            self.clicked.append(self.cards.index(btn1))
+            if len(self.clicked) == 2:
+                self.swap_cards(conn)
+                btn1.configure(bd=5, bg="#7A5530")
+        else:  # cancel choose
+            btn1.configure(bd=5, bg="#7A5530")
+            self.clicked.remove(self.cards.index(btn1))
+            btn1.bind("<Enter>", hover_enter)
+            btn1.bind("<Leave>", hover_leave)
+
+    def swap_cards(self, conn):
+        self.cards[self.clicked[0]]["text"], self.cards[self.clicked[1]]["text"] = \
+            self.cards[self.clicked[1]]["text"], self.cards[self.clicked[0]]["text"]
+        self.cards[self.clicked[0]]["fg"], self.cards[self.clicked[1]]["fg"] = \
+            self.cards[self.clicked[1]]["fg"], self.cards[self.clicked[0]]["fg"]
+        for card_index in self.clicked:  # not the get/change cards
+            self.cards[card_index].configure(bd=2, bg="#996C3D", activeforeground=self.cards[card_index]["fg"])
+            if card_index < 14:
+                self.cards[card_index].bind("<Enter>", hover_enter)
+                self.cards[card_index].bind("<Leave>", hover_leave)
+            else:
+                self.cards[card_index]["state"] = tk.DISABLED
+                self.change_card_btn["state"] = tk.DISABLED
+                self.not_change_btn["state"] = tk.DISABLED
+                self.declare_vct_btn["state"] = tk.DISABLED
+                self.cards[card_index].unbind("<Button>")
+                send_messages(conn, client_commands["pass_card_cmd"], json.dumps([self.list_of_players[0][0],  # only the name of the creator
+                                                                                  (str(self.cards[card_index]["text"]),
+                                                                                    str(self.cards[card_index]["fg"]))]))
+                # sends only once
+        self.clicked = []
+
+    def change_card(self, number: str, color, conn):
+        self.at_change = True
+        self.change_card_btn["state"] = tk.DISABLED
+        self.not_change_btn["state"] = tk.NORMAL
+        self.cards[-2]["state"] = tk.DISABLED
+        self.cards[-2].unbind("<Leave>")
+        self.cards[-2].unbind("<Enter>")
+        self.cards[-2].unbind("<Button>")
+        if 14 in self.clicked:  # the index of the get card
+            self.clicked.remove(14)
+            self.cards[-2].configure(bd=2, bg="#996C3D")
+        self.cards[-2]["text"] = ""
+        self.cards[-1]["state"] = tk.NORMAL
+        self.cards[-1].bind("<Leave>", hover_leave)
+        self.cards[-1].bind("<Enter>", hover_enter)
+        self.cards[-1].bind("<Button>", lambda event, conn1=conn: self.clicked_on(event=event, conn=conn1))
+        self.cards[-1].configure(text=number, fg=color)
+        self.cards[-1].configure(activeforeground=self.cards[-1]['fg'])
+
+    def start_game(self, cards, conn):
+        self.close_waiting_room_menu()
+        self.current_lobby = "game"
+        self.change_card_btn["state"] = tk.DISABLED
+        self.not_change_btn["state"] = tk.DISABLED
+        self.declare_vct_btn["state"] = tk.DISABLED
+        for i, btn in enumerate(self.cards[:14]):
+            if btn["state"] != tk.DISABLED:
+                btn.configure(text=cards[i][0], fg=cards[i][1])
+                btn["activeforeground"] = btn["fg"]
+                btn.bind("<Enter>", hover_enter)
+                btn.bind("<Leave>", hover_leave)
+                btn.bind("<Button>", lambda event, conn1=conn: self.clicked_on(event=event, conn=conn1))
+
+        self.turn_who.place(x=self.root.winfo_screenwidth() // 2, y= 20)
+        self.frame.grid(row=0, column=0, padx=75, pady=(self.root.winfo_screenheight() // 4, 0))
+        self.frame_get_cards.grid(row=0, column=1, pady=(200, 0))
+        self.declare_vct_btn.grid(row=1, column=1, sticky=tk.W)
+        self.change_card_btn.grid(row=1, column=1, sticky=tk.E, padx=(200, 0))
+        self.not_change_btn.grid(row=2, column=1, padx=(25, 0), pady=(20, 0))
+
+    def get_card(self, number: str, color, conn, is_start_turn=True):
+        self.at_change = False
+        self.change_card_btn["state"] = tk.NORMAL
+        self.not_change_btn["state"] = tk.DISABLED
+        if is_start_turn:
+            self.declare_vct_btn["state"] = tk.NORMAL
+        self.cards[-1]["state"] = tk.DISABLED
+        self.cards[-1].unbind("<Leave>")
+        self.cards[-1].unbind("<Enter>")
+        self.cards[-1].unbind("<Button>")
+        if 15 in self.clicked:  # the index of the get card
+            self.clicked.remove(15)
+            self.cards[-1].configure(bd=2, bg="#996C3D")
+        self.cards[-1]["text"] = ""
+        self.cards[-2]["state"] = tk.NORMAL
+        self.cards[-2].bind("<Leave>", hover_leave)
+        self.cards[-2].bind("<Enter>", hover_enter)
+        self.cards[-2].bind("<Button>", lambda event, conn1=conn: self.clicked_on(event=event, conn=conn1))
+        self.cards[-2].configure(text=number, fg=color)
+        self.cards[-2].configure(activeforeground=self.cards[-1]['fg'])
+
+    def not_even_change_card(self, conn):
+        self.not_change_btn["state"] = tk.DISABLED
+        self.declare_vct_btn["state"] = tk.DISABLED
+        card = self.cards[-1]["text"], self.cards[-1]["fg"]  # the change card's properties
+        self.cards[-1]["state"] = tk.DISABLED
+        self.cards[-1].unbind("<Leave>")
+        self.cards[-1].unbind("<Enter>")
+        self.cards[-1].unbind("<Button>")
+        if 15 in self.clicked:  # the index of the get card
+            self.clicked.remove(15)
+            self.cards[-1].configure(bd=2, bg="#996C3D")
+        send_messages(conn, client_commands["pass_card_cmd"], json.dumps((self.list_of_players[0][0], card)))
+
+    def close_game_room(self):
+        for card in self.cards:
+            card.configure(text="", fg="black")
+            card.unbind("<Leave>")
+            card.unbind("<Enter>")
+            card.unbind("<Button>")
+        self.clicked = []
+        self.turn_who.place_forget()
+        self.frame.grid_forget()
+        self.frame_get_cards.grid_forget()
+        self.declare_vct_btn.grid_forget()
+        self.change_card_btn.grid_forget()
+        self.not_change_btn.grid_forget()
+        self.list_of_players = []
+        self.temp_information_about_the_room = []
+        self.is_first_time_getting_players = True
+        self.win_label.place_forget()
+
+    def send_to_check_win(self, conn):
+        self.declare_vct_btn["state"] = tk.DISABLED
+        self.change_card_btn["state"] = tk.DISABLED
+        self.not_change_btn["state"] = tk.DISABLED
+        dict_cards = {}
+        for i, card in enumerate(self.cards[:14]):
+            dict_cards[i] = {"text": card["text"], "fg": card["fg"]}
+        send_messages(conn, client_commands["check_win_cmd"],
+                      f"{self.list_of_players[0][0]}#{json.dumps([[dict_cards[0], dict_cards[1], dict_cards[2], dict_cards[3]], [dict_cards[4], dict_cards[5], dict_cards[6]], [dict_cards[7], dict_cards[8], dict_cards[9], dict_cards[10]],[dict_cards[11], dict_cards[12], dict_cards[13]]])}")
+
+
 
 
 if __name__ == "__main__":

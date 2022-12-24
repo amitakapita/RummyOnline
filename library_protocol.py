@@ -13,8 +13,11 @@ client_commands = {
     "create_game_room_lobby_cmd": "CREATE_ROOM",
     "close_lobby_cmd": "CLOSE_LOBBY",
     "leave_my_player_cmd": "LEAVE_PLAYER",
-    "join_game_room_cmd": "JGR"
-}
+    "join_game_room_cmd": "JGR",
+    "send_card_cmd": "SEND_CARD",
+    "pass_card_cmd": "PASS_CARD",
+    "check_win_cmd": "CHECK_WIN",
+    }
 
 server_commands = {
     "login_ok_cmd": "LOGIN_OK",
@@ -27,6 +30,11 @@ server_commands = {
     "join_player_game_room_server_ok_cmd": "JP_GR_OK",
     "join_player_game_room_server_failed_cmd": "JP_GR_FAILED",
     "create_room_game_lobby_failed_cmd": "CR_FAILED",
+    "send_card_ok_cmd": "SEND_CARD_OK",
+    "pass_card_ok_cmd": "PASS_CARD_OK",
+    "turn_of_cmd": "TURN_OF",
+    "win_cmd": "WIN",
+    "win_fail_cmd": "WIN_FAIL",
     # game rooms commands:
     "join_player_ok_cmd": "JOIN_PLAYER_OK",
     "join_player_failed_cmd": "JOIN_PL_FAILED",
