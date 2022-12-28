@@ -19,6 +19,7 @@ dict_colors1 = {"red": "firebrick4", "blue": "SteelBlue4", "green": "chartreuse4
 game_room_players_dict = {}  # {creator: [Players: list]}
 colors_cards = ["red", "blue", "green", "black"]
 game_turns_of = {}  # {creator: turns_of: Player, ...}
+numbers1 = ["👑", "👑", "👑", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]
 
 
 def check_login(conn, msg, con):
@@ -97,7 +98,7 @@ def join_a_player_to_game_room(conn, creator):
 
 
 def send_card(conn, is_at_start=False):
-    message = library_protocol.build_message(server_commands["send_card_ok_cmd"], json.dumps((str(random.randint(1, 13)),
+    message = library_protocol.build_message(server_commands["send_card_ok_cmd"], json.dumps((str(random.choice(numbers1)),
                                                                                    random.choice(colors_cards), is_at_start)))
     # true for start of the game
     print(f"[Server] -> [Client {conn.getpeername()}] {message}")
@@ -121,26 +122,51 @@ def send_turn_of(creator):
 def check_win(cards_sets):
     for list1 in cards_sets:
         if not (check_series(list1) or check_color(list1)):
+            print(f"win check failed at check in serial - {list1}")
             return False
     print("win")
     return True
 
 
 def check_series(cards1: list):
+    count1 = 0
+    for card in cards1:
+        if card["text"] == "👑":
+            count1 += 1
+    if count1 >= 2:
+        return False  # 2 or more jokers in seria
     for index, card in enumerate(cards1[:-1]):
-        if int(card["text"]) + 1 != int(cards1[index + 1]["text"]) or card["fg"] != cards1[index + 1]["fg"]:
+        if card["text"] == "👑" or cards1[index + 1]["text"] == "👑":  # current or the next card
+            if (index == 1 or index == 2) and card["text"] == "👑":  # in 3 cards in a seria 2 wil not iterate in the for [:-1]
+                if int(cards1[index - 1]["text"]) + 2 != int(cards1[index + 1]["text"]):
+                    return False
+            elif index == 1 and cards1[index + 1]["text"] == "👑" and len(cards1) == 4:  # 4 cards in a seria
+                if int(cards1[index]["text"]) + 2 != int(cards1[index + 2]["text"]):
+                    return False
+            elif index == 3 and card["text"] == "👑":
+                if cards1[2]["text"] == "13":  # 👑 cannot be after 13.
+                    return False
+            elif len(cards1) == 3 and index == 1 and card[2]["text"] == "👑":  # in 3 cards in a seria
+                if cards1[1]["text"] == "13":  # 👑 cannot be after 13.
+                    return False
+            if card["fg"] != cards1[index + 1]["fg"] and cards1[index + 1]["text"] != "1":  # joker can't be before 1
+                return False
+            # continue
+        elif int(card["text"]) + 1 != int(cards1[index + 1]["text"]) or card["fg"] != cards1[index + 1]["fg"]:
             return False
     return True
 
 
 def check_color(cards1: list):
+    value = ""
+    flag = True
     for card in cards1:
-        if cards1.count(card["fg"]) > 1:
+        if list(map(lambda x: x["fg"], cards1)).count(card["fg"]) > 1:
             return False
-    for index, card in enumerate(cards1[:-1]):
-        if card["text"] != cards1[index + 1]["text"]:
-            return False
-    return True
+        if card["text"] != "👑" and flag:
+            value = card["text"]
+            flag = False
+    return list(map(lambda x: x["text"], cards1)).count("👑") + list(map(lambda x: x["text"], cards1)).count(value) == len(cards1)
 
 
 class Server(object):
@@ -305,7 +331,7 @@ class Server(object):
             for player in game_room_players_dict[login_dict[conn][1]]:
                 message1: list = []
                 for _ in range(14):  # generate numbers
-                    message1.append((str(random.randint(1, 13)), random.choice(colors_cards)))
+                    message1.append((str(random.choice(numbers1)), random.choice(colors_cards)))
                 message = library_protocol.build_message(to_send, json.dumps(message1))
                 print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
                 player.conn.sendall(message.encode())
