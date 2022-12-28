@@ -17,9 +17,10 @@ colors = ["firebrick4", "SteelBlue4", "chartreuse4", "#DBB600"]
 dict_colors = {"firebrick4": "red", "SteelBlue4": "blue", "chartreuse4": "green", "#DBB600": "yellow"}
 dict_colors1 = {"red": "firebrick4", "blue": "SteelBlue4", "green": "chartreuse4", "yellow": "#DBB600"}
 game_room_players_dict = {}  # {creator: [Players: list]}
-colors_cards = ["red", "blue", "green", "black"]
+colors_cards = ["red4", "blue", "green", "black"]
 game_turns_of = {}  # {creator: turns_of: Player, ...}
-numbers1 = ["👑", "👑", "👑", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]
+numbers1 = ["👑", "1", "1", "2", "2", "3", "3", "4", "4", "5", "5", "6", "6", "7", "7", "8", "8", "9", "9", "10", "10",
+            "11", "11", "12", "12", "13", "13"]
 
 
 def check_login(conn, msg, con):
@@ -88,7 +89,7 @@ def join_a_player_to_game_room(conn, creator):
         if game_rooms_dict[creator][0] <= len(game_rooms_dict[creator][1]) or game_rooms_dict[creator][2]:
             # full/started
             return server_commands["join_player_game_room_server_failed_cmd"], \
-                   "game room lobby is full or the game has started"
+                "game room lobby is full or the game has started"
         game_rooms_dict[creator][1].append(login_dict[conn][1])
         game_room_players_dict[creator].append(Player(color=list(dict_colors1.keys())[
             len(game_room_players_dict[creator])], conn=conn, player_name=login_dict[conn][1], creator=creator))
@@ -98,8 +99,9 @@ def join_a_player_to_game_room(conn, creator):
 
 
 def send_card(conn, is_at_start=False):
-    message = library_protocol.build_message(server_commands["send_card_ok_cmd"], json.dumps((str(random.choice(numbers1)),
-                                                                                   random.choice(colors_cards), is_at_start)))
+    message = library_protocol.build_message(server_commands["send_card_ok_cmd"],
+                                             json.dumps((str(random.choice(numbers1)),
+                                                         random.choice(colors_cards), is_at_start)))
     # true for start of the game
     print(f"[Server] -> [Client {conn.getpeername()}] {message}")
     conn.sendall(message.encode())
@@ -113,7 +115,9 @@ def pass_card(conn, card):
 
 
 def send_turn_of(creator):
-    message = library_protocol.build_message(server_commands["turn_of_cmd"], json.dumps((game_turns_of[creator].player_name, game_turns_of[creator].color)))  # (name, color)
+    message = library_protocol.build_message(server_commands["turn_of_cmd"],
+                                             json.dumps((game_turns_of[creator].player_name,
+                                                         game_turns_of[creator].color)))  # (name, color)
     for player in game_room_players_dict[creator]:  # sends to all the players in the game room
         print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
         player.conn.sendall(message.encode())
@@ -137,7 +141,8 @@ def check_series(cards1: list):
         return False  # 2 or more jokers in seria
     for index, card in enumerate(cards1[:-1]):
         if card["text"] == "👑" or cards1[index + 1]["text"] == "👑":  # current or the next card
-            if (index == 1 or index == 2) and card["text"] == "👑":  # in 3 cards in a seria 2 wil not iterate in the for [:-1]
+            if (index == 1 or index == 2) and card["text"] == "👑":
+                # in 3 cards in a seria 2 wil not iterate in the for [:-1]
                 if int(cards1[index - 1]["text"]) + 2 != int(cards1[index + 1]["text"]):
                     return False
             elif index == 1 and cards1[index + 1]["text"] == "👑" and len(cards1) == 4:  # 4 cards in a seria
@@ -166,7 +171,8 @@ def check_color(cards1: list):
         if card["text"] != "👑" and flag:
             value = card["text"]
             flag = False
-    return list(map(lambda x: x["text"], cards1)).count("👑") + list(map(lambda x: x["text"], cards1)).count(value) == len(cards1)
+    return list(map(lambda x: x["text"], cards1)).count("👑") + list(map(lambda x: x["text"],
+                                                                        cards1)).count(value) == len(cards1)
 
 
 class Server(object):
@@ -312,9 +318,9 @@ class Server(object):
                 else:  # only 1 player remains and it is the creator
                     message = library_protocol.build_message(server_commands["close_lobby_ok_cmd"])
                     for player in game_room_players_dict[msg]:  # sending the clients to exit the game room
-                            print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
-                            player.conn.sendall(message.encode())
-                            break
+                        print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+                        player.conn.sendall(message.encode())
+                        break
                     del game_rooms_dict[msg]  # deleting game room
                     del game_room_players_dict[msg]
             else:
@@ -346,9 +352,12 @@ class Server(object):
         elif cmd == client_commands["pass_card_cmd"]:
             msg = json.loads(msg)
             creator = msg[0]
-            print(str(game_turns_of[creator]), str(game_room_players_dict[creator]), str(game_room_players_dict[creator].index(game_turns_of[creator]) + 1), str(len(game_room_players_dict)), sep="\n")
-            game_turns_of[creator] = game_room_players_dict[creator][(game_room_players_dict[creator].index(game_turns_of[creator]) + 1)
-                                                             % len(game_room_players_dict[creator])]  # next turn
+            print(str(game_turns_of[creator]), str(game_room_players_dict[creator]),
+                  str(game_room_players_dict[creator].index(game_turns_of[creator]) + 1),
+                  str(len(game_room_players_dict)), sep="\n")
+            game_turns_of[creator] = game_room_players_dict[creator][
+                (game_room_players_dict[creator].index(game_turns_of[creator]) + 1)
+                % len(game_room_players_dict[creator])]  # next turn
             send_turn_of(creator)
             time.sleep(0.2)
             pass_card(game_turns_of[creator].conn, msg[1])
@@ -359,7 +368,9 @@ class Server(object):
             if check_win(msg):
                 cur = con.cursor()
                 for player in game_room_players_dict[msg1[0]]:
-                    message = library_protocol.build_message(server_commands["win_cmd"], f"{game_turns_of[msg1[0]].player_name}#{game_turns_of[msg1[0]].color}")
+                    message = library_protocol.build_message(server_commands["win_cmd"],
+                                                             f"{game_turns_of[msg1[0]].player_name}#"
+                                                             f"{game_turns_of[msg1[0]].color}")
                     print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
                     player.conn.sendall(message.encode())
                     cur.execute("SELECT played_games, wins FROM Users WHERE Username = ?", (player.player_name,))

@@ -12,7 +12,6 @@ import json
 colors = ["firebrick4", "SteelBlue4", "chartreuse4", "#DBB600"]
 dict_colors = {"firebrick4": "red", "SteelBlue4": "blue", "chartreuse4": "green", "#DBB600": "yellow"}
 dict_colors1 = {"red": "firebrick4", "blue": "SteelBlue4", "green": "chartreuse4", "yellow": "#DBB600"}
-colors_cards = ["red", "blue", "green", "black"]
 
 
 def send_messages(conn, data, msg=""):
@@ -156,23 +155,27 @@ class Client(object):
                                          font="Arial 14", text="Change Card")
         self.lbl_cards = tk.Label(self.frame_get_cards, font="Arial 15", text="Get            Change", bg="#2596be")
         self.turn_who = tk.Label(self.root, font="Arial 15", bg="#2596be")
-        self.not_change_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2", font="Arial 14", text="Don't want this card")
+        self.not_change_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
+                                        font="Arial 14", text="Don't want this card")
         self.win_label = tk.Label(self.root, font="Arial 15", bg="#2596be")
         self.at_change = True
 
         # cards and more in-game
         for _ in range(4):
-            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42",
+                            disabledforeground="black", activebackground="#A01E50")
             btn.place(x=space, y=spacey)
             self.cards.append(btn)
             space += 120
         space += 150
-        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42",
+                        disabledforeground="black", activebackground="#A01E50")
         btn.place(x=space, y=spacey)
         self.cards.append(btn)
         for _ in range(2):
             space += 120
-            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42",
+                            disabledforeground="black", activebackground="#A01E50")
             btn.place(x=space, y=spacey)
             self.cards.append(btn)
         spacey += 210
@@ -185,7 +188,8 @@ class Client(object):
             self.cards.append(btn)
             space += 120
         space += 150
-        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42",
+                        disabledforeground="black", activebackground="#A01E50")
         btn.place(x=space, y=spacey)
         self.cards.append(btn)
         for _ in range(2):
@@ -316,7 +320,7 @@ class Client(object):
         elif cmd == server_commands["win_cmd"]:
             msg = msg.split("#")
             self.win_label.configure(text=f"{msg[0]} Wins", fg=msg[1])
-            self.win_label.place(x=self.root.winfo_screenwidth() // 2, y = 70)
+            self.win_label.place(x=self.root.winfo_screenwidth() // 2, y=70)
             self.declare_vct_btn["state"] = tk.DISABLED
             self.change_card_btn["state"] = tk.DISABLED
             self.not_change_btn["state"] = tk.DISABLED
@@ -401,8 +405,8 @@ class Client(object):
 
     def register_account(self, conn):
         self.username, self.password, self.confirmed_password = self.enter_name_input.get(), \
-                                                                self.enter_password_input.get(), \
-                                                                self.confirm_password_input_enter.get()
+            self.enter_password_input.get(), \
+            self.confirm_password_input_enter.get()
         if self.username == "":
             self.lbl2_message["text"] = "the username isn't empty"
         elif not library_protocol.check_username_validation(self.username):
@@ -701,9 +705,10 @@ class Client(object):
                 self.not_change_btn["state"] = tk.DISABLED
                 self.declare_vct_btn["state"] = tk.DISABLED
                 self.cards[card_index].unbind("<Button>")
-                send_messages(conn, client_commands["pass_card_cmd"], json.dumps([self.list_of_players[0][0],  # only the name of the creator
-                                                                                  (str(self.cards[card_index]["text"]),
-                                                                                    str(self.cards[card_index]["fg"]))]))
+                send_messages(conn, client_commands["pass_card_cmd"],
+                              json.dumps([self.list_of_players[0][0],  # only the name of the creator
+                                          (str(self.cards[card_index]["text"]),
+                                           str(self.cards[card_index]["fg"]))]))
                 # sends only once
         self.clicked = []
 
@@ -740,7 +745,7 @@ class Client(object):
                 btn.bind("<Leave>", hover_leave)
                 btn.bind("<Button>", lambda event, conn1=conn: self.clicked_on(event=event, conn=conn1))
 
-        self.turn_who.place(x=self.root.winfo_screenwidth() // 2, y= 20)
+        self.turn_who.place(x=self.root.winfo_screenwidth() // 2, y=20)
         self.frame.grid(row=0, column=0, padx=75, pady=(self.root.winfo_screenheight() // 4, 0))
         self.frame_get_cards.grid(row=0, column=1, pady=(200, 0))
         self.declare_vct_btn.grid(row=1, column=1, sticky=tk.W)
@@ -766,7 +771,7 @@ class Client(object):
         self.cards[-2].bind("<Enter>", hover_enter)
         self.cards[-2].bind("<Button>", lambda event, conn1=conn: self.clicked_on(event=event, conn=conn1))
         self.cards[-2].configure(text=number, fg=color)
-        self.cards[-2].configure(activeforeground=self.cards[-1]['fg'])
+        self.cards[-2].configure(activeforeground=self.cards[-2]['fg'])
 
     def not_even_change_card(self, conn):
         self.not_change_btn["state"] = tk.DISABLED
@@ -806,10 +811,12 @@ class Client(object):
         dict_cards = {}
         for i, card in enumerate(self.cards[:14]):
             dict_cards[i] = {"text": card["text"], "fg": card["fg"]}
+        cards_send = json.dumps([[dict_cards[0], dict_cards[1], dict_cards[2], dict_cards[3]],
+                                 [dict_cards[4], dict_cards[5], dict_cards[6]],
+                                 [dict_cards[7], dict_cards[8], dict_cards[9], dict_cards[10]],
+                                 [dict_cards[11], dict_cards[12], dict_cards[13]]])
         send_messages(conn, client_commands["check_win_cmd"],
-                      f"{self.list_of_players[0][0]}#{json.dumps([[dict_cards[0], dict_cards[1], dict_cards[2], dict_cards[3]], [dict_cards[4], dict_cards[5], dict_cards[6]], [dict_cards[7], dict_cards[8], dict_cards[9], dict_cards[10]],[dict_cards[11], dict_cards[12], dict_cards[13]]])}")
-
-
+                      f"{self.list_of_players[0][0]}#{cards_send}")
 
 
 if __name__ == "__main__":
