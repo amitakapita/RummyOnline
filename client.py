@@ -7,7 +7,6 @@ import traceback
 from library_protocol import client_commands, server_commands
 import time
 import json
-import random
 
 # constants
 colors = ["firebrick4", "SteelBlue4", "chartreuse4", "#DBB600"]
@@ -43,7 +42,9 @@ class Client(object):
         self.root.title("RummyOnline")
         self.root.attributes("-fullscreen", True)
         self.root.configure(bg="#2596be")
+        self.root.iconphoto(True, tk.PhotoImage(file=r"assets/favicon_logo_32x32.png"))
 
+        # login menu
         self.lbl_welcome = tk.Label(self.root, text="Welcome to RummyOnline", font="Arial 17", bg="#2596be")
         self.enter_name = tk.Label(self.root, text="Please enter your Username:", font="Arial 14", bg="#2596be")
         self.entry_username = tk.Entry(self.root, font="Arial 13", bg="DeepSkyBlue2", disabledbackground="DeepSkyBlue3")
