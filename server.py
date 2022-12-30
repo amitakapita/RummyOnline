@@ -151,7 +151,7 @@ def check_series(cards1: list):
             elif index == 3 and card["text"] == "👑":
                 if cards1[2]["text"] == "13":  # 👑 cannot be after 13.
                     return False
-            elif len(cards1) == 3 and index == 1 and card[2]["text"] == "👑":  # in 3 cards in a seria
+            elif len(cards1) == 3 and index == 1 and cards1[2]["text"] == "👑":  # in 3 cards in a seria
                 if cards1[1]["text"] == "13":  # 👑 cannot be after 13.
                     return False
             if card["fg"] != cards1[index + 1]["fg"] and cards1[index + 1]["text"] != "1":  # joker can't be before 1
