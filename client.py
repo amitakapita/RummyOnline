@@ -149,13 +149,18 @@ class Client(object):
         self.get_cards: list[tk.Button] = []
         font = int(self.root.winfo_screenwidth() // 45.714)
         inc = int(120 * (font / 42))
-        self.frame = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid", width=self.root.winfo_screenwidth() // 1.882, height=self.root.winfo_screenheight() // 2.4)
+        self.frame = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid",
+                              width=self.root.winfo_screenwidth() // 1.882,
+                              height=self.root.winfo_screenheight() // 2.4)
         self.declare_vct_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
                                          font="Arial 14", text="Declare Victory")
-        self.frame_get_cards = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid", width=self.root.winfo_screenwidth() // 7.68, height=self.root.winfo_screenheight() // 3.6)
+        self.frame_get_cards = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid",
+                                        width=self.root.winfo_screenwidth() // 7.68,
+                                        height=self.root.winfo_screenheight() // 3.6)
         self.change_card_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
                                          font="Arial 14", text="Change Card")
-        self.lbl_cards = tk.Label(self.frame_get_cards, font=f"Arial {int(font / 2.8)}", text="Get            Change", bg="#2596be")
+        self.lbl_cards = tk.Label(self.frame_get_cards, font=f"Arial {int(font / 2.8)}", text="Get            Change",
+                                  bg="#2596be")
         self.turn_who = tk.Label(self.root, font="Arial 15", bg="#2596be")
         self.not_change_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
                                         font="Arial 14", text="Don't want this card")

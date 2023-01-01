@@ -34,20 +34,7 @@ server_commands = {
     "pass_card_ok_cmd": "PASS_CARD_OK",
     "turn_of_cmd": "TURN_OF",
     "win_cmd": "WIN",
-    "win_fail_cmd": "WIN_FAIL",
-    # game rooms commands:
-    "join_player_ok_cmd": "JOIN_PLAYER_OK",
-    "join_player_failed_cmd": "JOIN_PL_FAILED",
-    "get_players_information_ok": "GET_PL_IN_OK",
-    "start_game_ok": "START_GAME_OK",
-    "close_lobby_ok_cmd": "CLOSE_LOBBY_OK",
-    "leave_player_ok_cmd": "LEAVE_PLAYER_OK",
-    "buy_building_ok_cmd": "BUY_BUILDING_OK",
-    "buy_building_failed_cmd": "BUY_BLFA",
-    "pulled_cubes_cmd": "PULLED_CUBES",
-    "turn_who_cmd": "TURN_WHO",
-    "update_points_cmd": "UP_POINTS",
-    "Wined_cmd": "WINS"
+    "win_fail_cmd": "WIN_FAIL"
 }
 
 
