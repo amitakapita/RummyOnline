@@ -147,13 +147,15 @@ class Client(object):
         self.cards = []
         self.clicked = []
         self.get_cards: list[tk.Button] = []
-        self.frame = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid", width=1020, height=450)
+        font = int(self.root.winfo_screenwidth() // 45.714)
+        inc = int(120 * (font / 42))
+        self.frame = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid", width=self.root.winfo_screenwidth() // 1.882, height=self.root.winfo_screenheight() // 2.4)
         self.declare_vct_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
                                          font="Arial 14", text="Declare Victory")
-        self.frame_get_cards = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid", width=250, height=300)
+        self.frame_get_cards = tk.Frame(self.root, bg="#2596be", bd=1, relief="solid", width=self.root.winfo_screenwidth() // 7.68, height=self.root.winfo_screenheight() // 3.6)
         self.change_card_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
                                          font="Arial 14", text="Change Card")
-        self.lbl_cards = tk.Label(self.frame_get_cards, font="Arial 15", text="Get            Change", bg="#2596be")
+        self.lbl_cards = tk.Label(self.frame_get_cards, font=f"Arial {int(font / 2.8)}", text="Get            Change", bg="#2596be")
         self.turn_who = tk.Label(self.root, font="Arial 15", bg="#2596be")
         self.not_change_btn = tk.Button(self.root, relief="solid", activebackground="DeepSkyBlue3", bg="DeepSkyBlue2",
                                         font="Arial 14", text="Don't want this card")
@@ -162,54 +164,54 @@ class Client(object):
 
         # cards and more in-game
         for _ in range(4):
-            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42",
+            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font=f"Arial {font}",
                             disabledforeground="black", activebackground="#A01E50")
             btn.place(x=space, y=spacey)
             self.cards.append(btn)
-            space += 120
-        space += 150
-        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42",
+            space += inc
+        space += int(150 * font / 42)
+        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font=f"Arial {font}",
                         disabledforeground="black", activebackground="#A01E50")
         btn.place(x=space, y=spacey)
         self.cards.append(btn)
         for _ in range(2):
-            space += 120
-            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42",
+            space += inc
+            btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font=f"Arial {font}",
                             disabledforeground="black", activebackground="#A01E50")
             btn.place(x=space, y=spacey)
             self.cards.append(btn)
-        spacey += 210
+        spacey += int(210 * (font / 42))
         space = 20
         for _ in range(4):
             btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2,
-                            font="Arial 42", disabledforeground="black",
+                            font=f"Arial {font}", disabledforeground="black",
                             activebackground="#A01E50")
             btn.place(x=space, y=spacey)
             self.cards.append(btn)
-            space += 120
-        space += 150
-        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font="Arial 42",
+            space += inc
+        space += int(150 * font / 42)
+        btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2, font=f"Arial {font}",
                         disabledforeground="black", activebackground="#A01E50")
         btn.place(x=space, y=spacey)
         self.cards.append(btn)
         for _ in range(2):
-            space += 120
+            space += inc
             btn = tk.Button(self.frame, relief="solid", bg="#996C3D", width=3, height=2, bd=2,
-                            font="Arial 42", disabledforeground="black", activebackground="#A01E50")
+                            font=f"Arial {font}", disabledforeground="black", activebackground="#A01E50")
             btn.place(x=space, y=spacey)
             self.cards.append(btn)
 
         space = 10
-        spacey = 100
-        lbl1 = tk.Label(self.frame_get_cards, font="Arial 15", text="Get            Change", bg="#2596be")
-        lbl1.place(x=40, y=20)
+        spacey = int(100 * font / 42)
+
+        self.lbl_cards.place(x=int(40 * font / 42), y=20)
         for i in range(2):
             btn = tk.Button(self.frame_get_cards, relief="solid", bg="#996C3D", width=3, height=2, bd=2,
-                            font="Arial 42", activebackground="#A01E50", state=tk.DISABLED)
+                            font=f"Arial {font}", activebackground="#A01E50", state=tk.DISABLED)
             btn.place(x=space, y=spacey)
             self.get_cards.append(btn)
             self.cards.append(btn)
-            space += 120
+            space += inc
         # self.cards[-2]["text"] = str(random.randint(1, 13))
 
     def start(self):
@@ -605,8 +607,10 @@ class Client(object):
             space = 0
             for creator in game_rooms_dict.keys():
                 max_players, players = game_rooms_dict[creator][0], game_rooms_dict[creator][1]
-                rectangle1 = self.game_rooms_lobby_canvas.create_rectangle(353, 170 + space, 985, 300 + space,
-                                                                           activewidth=3, width=2, fill="#AFABAB")
+                rectangle1 = self.game_rooms_lobby_canvas.create_rectangle(353, 170 + space,
+                                                                           self.root.winfo_screenwidth() // 1.949,
+                                                                           300 + space, activewidth=3, width=2,
+                                                                           fill="#AFABAB")
                 self.game_rooms_lobby_canvas.create_text(370, 195 + space, text=f"{creator}'s lobby room",
                                                          font="Arial 16", fill="black", state=tk.DISABLED, anchor=tk.NW)
                 self.game_rooms_lobby_canvas.create_text(370, 230 + space,
@@ -625,7 +629,8 @@ class Client(object):
                 if len(game_rooms_dict[creator][1]) >= max_players:
                     button_join_game["state"] = tk.DISABLED
                 button_join_game.place(x=500, y=170 + space)
-                self.game_rooms_lobby_canvas.create_window(950, 100 + space, window=button_join_game)
+                self.game_rooms_lobby_canvas.create_window(self.root.winfo_screenwidth() // 1.949 - 35, 100 + space,
+                                                           window=button_join_game)
                 self.game_rooms_lobby_canvas.itemconfigure(rectangle1, state=tk.NORMAL)
 
     def update_list_of_players(self, new_list_of_players):
