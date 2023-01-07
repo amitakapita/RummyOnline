@@ -34,7 +34,11 @@ server_commands = {
     "pass_card_ok_cmd": "PASS_CARD_OK",
     "turn_of_cmd": "TURN_OF",
     "win_cmd": "WIN",
-    "win_fail_cmd": "WIN_FAIL"
+    "win_fail_cmd": "WIN_FAIL",
+    "join_player_ok_cmd": "JOIN_PLAYER_OK",
+    "start_game_ok": "START_GAME_OK",
+    "close_lobby_ok_cmd": "CLOSE_LOBBY_OK",
+    "leave_player_ok_cmd": "LEAVE_PLAYER_OK",
 }
 
 

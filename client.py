@@ -315,7 +315,7 @@ class Client(object):
         elif cmd == server_commands["send_card_ok_cmd"]:
             msg = json.loads(msg)
             if msg[2]:
-                self.get_card(msg[0], msg[1], conn, is_start_turn=False)
+                self.get_card(msg[0], msg[1], conn)
             else:
                 self.change_card(msg[0], msg[1], conn)
         elif cmd == server_commands["pass_card_ok_cmd"]:
@@ -762,12 +762,11 @@ class Client(object):
         self.change_card_btn.grid(row=1, column=1, sticky=tk.E, padx=(200, 0))
         self.not_change_btn.grid(row=2, column=1, padx=(25, 0), pady=(20, 0))
 
-    def get_card(self, number: str, color, conn, is_start_turn=True):
+    def get_card(self, number: str, color, conn):
         self.at_change = False
         self.change_card_btn["state"] = tk.NORMAL
         self.not_change_btn["state"] = tk.DISABLED
-        if is_start_turn:
-            self.declare_vct_btn["state"] = tk.NORMAL
+        self.declare_vct_btn["state"] = tk.NORMAL
         self.cards[-1]["state"] = tk.DISABLED
         self.cards[-1].unbind("<Leave>")
         self.cards[-1].unbind("<Enter>")
