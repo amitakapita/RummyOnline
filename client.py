@@ -16,7 +16,7 @@ dict_colors1 = {"red": "firebrick4", "blue": "SteelBlue4", "green": "chartreuse4
 
 def send_messages(conn, data, msg=""):
     message = library_protocol.build_message(data, msg)
-    print(f"[Client] {message}\n--------------------------------\n")
+    print(f"[Client] {message}\n")
     conn.sendall(message.encode())
 
 
@@ -343,6 +343,7 @@ class Client(object):
                 self.change_card_btn["state"] = tk.NORMAL
             else:
                 self.not_change_btn["state"] = tk.NORMAL
+        print("--------------------------------")
 
     def login_lobby(self):
         self.current_lobby = "login"

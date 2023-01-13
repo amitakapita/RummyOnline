@@ -80,7 +80,6 @@ def profile_info(conn, con):
 
 def lobby_rooms():
     lobby_rooms1 = json.dumps(game_rooms_dict)
-    print(lobby_rooms1)
     return server_commands["get_lr_ok_cmd"], lobby_rooms1
 
 
@@ -103,14 +102,14 @@ def send_card(conn, is_at_start=False):
                                              json.dumps((str(random.choice(numbers1)),
                                                          random.choice(colors_cards), is_at_start)))
     # true for start of the game
-    print(f"[Server] -> [Client {conn.getpeername()}] {message}")
+    print(f"[Server] -> [Client {conn.getpeername()}] {message}\n--------------------------\n")
     conn.sendall(message.encode())
 
 
 def pass_card(conn, card):
     message = library_protocol.build_message(server_commands["pass_card_ok_cmd"], json.dumps(card))
     # true for start of the game
-    print(f"[Server] -> [Client {conn.getpeername()}] {message}")
+    print(f"[Server] -> [Client {conn.getpeername()}] {message}\n--------------------------\n")
     conn.sendall(message.encode())
 
 
@@ -119,7 +118,7 @@ def send_turn_of(creator):
                                              json.dumps((game_turns_of[creator].player_name,
                                                          game_turns_of[creator].color)))  # (name, color)
     for player in game_room_players_dict[creator]:  # sends to all the players in the game room
-        print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+        print(f">>> [Server] -> [Client {player.conn.getpeername()}] {message}")
         player.conn.sendall(message.encode())
 
 
@@ -230,7 +229,7 @@ class Server(object):
                     for player in game_room_players_dict[login_dict[conn][1]]:
                         # sending the clients to exit the game room
                         if player.player_name != login_dict[conn][1]:  # not the creator that exit the room
-                            print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+                            print(f">>> [Server] -> [Client {player.conn.getpeername()}] {message}")
                             player.conn.sendall(message.encode())
                     del game_room_players_dict[login_dict[conn][1]]
                     del game_rooms_dict[login_dict[conn][1]]
@@ -247,7 +246,7 @@ class Server(object):
                             message = library_protocol.build_message(server_commands["leave_player_ok_cmd"],
                                                                      self.players_information(creator))
                             for player in game_room_players_dict[creator]:
-                                print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+                                print(f">>> [Server] -> [Client {player.conn.getpeername()}] {message}")
                                 player.conn.sendall(message.encode())
                             break  # we found the player and removing him from the lists and dicts
                 del login_dict[conn]
@@ -257,7 +256,7 @@ class Server(object):
         finally:
             if con:
                 con.close()
-                print(f"DB Connection has closed with that Client\n--------------------------")
+                print(f"DB Connection has closed with that Client\n--------------------------\n")
             self.amount_clients -= 1
 
     def handle_client_commands(self, conn, request, con):
@@ -273,7 +272,7 @@ class Server(object):
             try:
                 wait_login[conn] = login_dict[conn][0]  # only the peer name
                 del login_dict[conn]
-                print("Logout from the account succeeded.\n--------------------------")
+                print("Logout from the account succeeded.\n--------------------------\n")
                 return
             except KeyError:  # if the player is between the main server to the games rooms server
                 return
@@ -294,10 +293,9 @@ class Server(object):
             print(f"[Server] -> [{conn.getpeername()}] {to_send1}")
             conn.sendall(to_send1.encode())
             if to_send == server_commands["join_player_game_room_server_ok_cmd"]:
-                print(f"{login_dict[conn][0]} has been switched to game room {msg}")
-                #  game_rooms_dict[msg][1].append(login_dict[conn][1])  # adding player name
-                print(game_room_players_dict)
+                print(f">>> {login_dict[conn][0]} has been switched to game room {msg}")
                 self.send_information_of_players(msg)  # if the players cannot join (full/there is no room)
+            print("--------------------------\n")
             return
         elif cmd == client_commands["leave_my_player_cmd"]:
             if login_dict[conn][1] not in game_rooms_dict.keys():
@@ -313,12 +311,12 @@ class Server(object):
                     message = library_protocol.build_message(server_commands["leave_player_ok_cmd"],
                                                              self.players_information(msg))
                     for player in game_room_players_dict[msg]:
-                        print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+                        print(f">>> [Server] -> [Client {player.conn.getpeername()}] {message}")
                         player.conn.sendall(message.encode())
                 else:  # only 1 player remains and it is the creator
                     message = library_protocol.build_message(server_commands["close_lobby_ok_cmd"])
                     for player in game_room_players_dict[msg]:  # sending the clients to exit the game room
-                        print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+                        print(f">>> [Server] -> [Client {player.conn.getpeername()}] {message}")
                         player.conn.sendall(message.encode())
                         break
                     del game_rooms_dict[msg]  # deleting game room
@@ -327,10 +325,11 @@ class Server(object):
                 message = library_protocol.build_message(server_commands["close_lobby_ok_cmd"])
                 for player in game_room_players_dict[msg]:  # sending the clients to exit the game room
                     if player.player_name != msg:  # not the creator that closes the room
-                        print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+                        print(f">>> [Server] -> [Client {player.conn.getpeername()}] {message}")
                         player.conn.sendall(message.encode())
                 del game_rooms_dict[msg]  # deleting game room
                 del game_room_players_dict[msg]
+            print("--------------------------\n")
             return
         elif cmd == client_commands["start_game_cmd"]:
             to_send = server_commands["start_game_ok"]
@@ -339,7 +338,7 @@ class Server(object):
                 for _ in range(14):  # generate numbers
                     message1.append((str(random.choice(numbers1)), random.choice(colors_cards)))
                 message = library_protocol.build_message(to_send, json.dumps(message1))
-                print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+                print(f">>> [Server] -> [Client {player.conn.getpeername()}] {message}")
                 player.conn.sendall(message.encode())
             game_turns_of[login_dict[conn][1]] = game_room_players_dict[login_dict[conn][1]][0]
             send_turn_of(login_dict[conn][1])
@@ -352,9 +351,6 @@ class Server(object):
         elif cmd == client_commands["pass_card_cmd"]:
             msg = json.loads(msg)
             creator = msg[0]
-            print(str(game_turns_of[creator]), str(game_room_players_dict[creator]),
-                  str(game_room_players_dict[creator].index(game_turns_of[creator]) + 1),
-                  str(len(game_room_players_dict)), sep="\n")
             game_turns_of[creator] = game_room_players_dict[creator][
                 (game_room_players_dict[creator].index(game_turns_of[creator]) + 1)
                 % len(game_room_players_dict[creator])]  # next turn
@@ -371,7 +367,7 @@ class Server(object):
                     message = library_protocol.build_message(server_commands["win_cmd"],
                                                              f"{game_turns_of[msg1[0]].player_name}#"
                                                              f"{game_turns_of[msg1[0]].color}")
-                    print(f"[Server] -> [Client {player.conn.getpeername()}] {message}")
+                    print(f">>> [Server] -> [Client {player.conn.getpeername()}] {message}")
                     player.conn.sendall(message.encode())
                     cur.execute("SELECT played_games, wins FROM Users WHERE Username = ?", (player.player_name,))
                     played_wins = cur.fetchall()
@@ -382,11 +378,12 @@ class Server(object):
                                     (int(str(played_wins[0][1])) + 1, player.player_name))
                 con.commit()
                 cur.close()
+                print("--------------------------\n")
                 return
             to_send = server_commands["win_fail_cmd"]
 
         to_send = library_protocol.build_message(to_send, msg_to_send)
-        print(f"[Server] -> [{conn.getpeername()}] {to_send}")
+        print(f">>> [Server] -> [{conn.getpeername()}] {to_send}\n--------------------------\n")
         conn.sendall(to_send.encode())
 
     def send_information_of_players(self, game_room_name, is_leave=False):
@@ -400,7 +397,7 @@ class Server(object):
         player: Player
         for player in game_room_players_dict[game_room_name]:  # sends each player in the lobby
             conn = player.conn
-            print(f"[Server] -> [Client {conn.getpeername()}] {message}")
+            print(f">>> [Server] -> [Client {conn.getpeername()}] {message}")
             conn.sendall(message.encode())
 
     def players_information(self, game_room_name):
